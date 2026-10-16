@@ -1,0 +1,36 @@
+# --- Environment Variables & Secrets (CRITICAL for LangChain) ---
+.env
+.env.*
+*.env
+secrets.json
+
+# --- Python Virtual Environments ---
+.venv/
+venv/
+env/
+ENV/
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --- Python Caching and Compiled Files ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- LangChain / Vector Database Local Storage ---
+# Prevents committing heavy, local vector indexes (e.g., Chroma, FAISS)
+chroma/
+faiss_index/
+.chroma/
+
+# --- IDE and System Files ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+#  chroma local DB
+.chroma_db

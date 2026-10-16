@@ -1,0 +1,25 @@
+import operator
+from typing import Annotated, TypedDict
+
+from langchain.messages import AnyMessage
+from langgraph.graph.message import add_messages
+
+
+class MessagesState(TypedDict):
+    messages: Annotated[list[AnyMessage], add_messages]
+    user_query: str
+    result: str
+    query_rating: int
+    mcpServer: str
+
+    tool_selected: str
+    tool_call_exist: bool
+    tool_args: dict
+    total_tools: int
+    tool_approved: str
+
+class SubGraphState(TypedDict):
+    messages: Annotated[list[AnyMessage], add_messages]
+    user_query: str
+    result: str
+    user_id:str
