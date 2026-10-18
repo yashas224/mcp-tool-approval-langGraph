@@ -204,41 +204,25 @@ async def gitHubCallBack(request: FastAPIRequest, code: str = None, state: str =
         return {"result": "GitHub Auth Failed", "status": "completed"}
 
 
-def getGitHubUser(userId: str):
-    token = token_db.get(token_db, None)
-    if not token:
+def getGitHubUser(user_id: str):
+    token = token_db.get(user_id, None)
+    if token:
         userJson = get_github_user(token=token)
         return userJson
     else:
-        None
+        return None
 
 
 @app.get("/conversation/latest")
 async def latest_messages(
-    user_id: str, userJson=Annotated[dict, Depends(getGitHubUser)]
+    user_id: str, userJson:Annotated[dict, Depends(getGitHubUser)]
 ):
     config = {"configurable": {"thread_id": user_id}}
     snapshot = await app.state.agent.aget_state(config)
-    messages = snapshot.values.get("messages", [])
-    latest_human = next(
-        (
-            message.content
-            for message in reversed(messages)
-            if isinstance(message, HumanMessage)
-        ),
-        None,
-    )
-    latest_ai = next(
-        (
-            message.content
-            for message in reversed(messages)
-            if isinstance(message, AIMessage)
-        ),
-        None,
-    )
+    github_query = snapshot.values.get("user_query", [])
+    auth_result=f"Successfully authorized : GitHub Account {userJson}" if userJson else "Authorization Failed"
 
     return {
-        "result": f"successfully authorized to {userJson} ",
-        "latest_human": latest_human,
-        "latest_ai": latest_ai,
+        "result": f"{auth_result} \n Rerun the github Query",
+        "github_query": github_query,
     }

@@ -15,7 +15,7 @@ def auth_check(state: SubGraphState):
             return "github_auth_flow"
         return "authenticated"
     if state["auth_retry"] ==2:
-        state["auth_retry"] =0
+        state["auth_retry"] =1
         return "authenticated-failed"
     state["auth_retry"] +=1
     return "auth-retry"
@@ -25,7 +25,7 @@ sub_graph_builder.add_node("github_execution_node", github_execution_node)
 
 sub_graph_builder.set_entry_point("github_token_validator_node")
 sub_graph_builder.add_conditional_edges("github_token_validator_node",auth_check,
-                                        {   "github_auth_flow":END
+                                        {   "github_auth_flow":END,
                                             "authenticated":"github_execution_node",
                                             "auth-retry":"github_token_validator_node",
                                             "authenticated-failed":END

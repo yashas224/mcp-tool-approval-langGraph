@@ -29,6 +29,16 @@ def build_graph(tools, tool_catalog):
         else:
             return "non-github-op"
 
+    def github_completion(state: MessagesState):
+        if not state["github_auth_token_validated"]:
+            return "github-auth-failed"
+        elif not state["git_hub_session_completed"]:
+            return "github-op-failed"
+        elif state["github_auth_flow"]:
+            return "github_auth_flow"
+        
+        return "github-op-cmpleted"
+
     checkpointer = InMemorySaver()
     agent_builder = (
         StateGraph(MessagesState)
@@ -51,6 +61,7 @@ def build_graph(tools, tool_catalog):
             tool_call_present,
             {"approval": "approval_node", "no-tool-selected": "conversational_node"},
         )
+        .add_conditional_edges("github-subgraph","conversational_node")
         .add_conditional_edges(
             "approval_node",
             approved_tool_execution,

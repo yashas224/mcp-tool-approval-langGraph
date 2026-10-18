@@ -94,10 +94,17 @@ else:
 
 latest_conversation = st.session_state.get("latest_conversation")
 if latest_conversation:
-    st.markdown("**Latest user message:**")
-    st.write(latest_conversation.get("latest_human") or "No user message found.")
-    st.markdown("**Latest AI response:**")
-    st.write(latest_conversation.get("latest_ai") or "No AI response found.")
+    st.markdown("GitHub Authentication")
+    st.write(latest_conversation.get("result") or "No user message found.")
+    github_query = st.text_input(
+        "GitHub query",
+        value=str(latest_conversation.get("github_query") or ""),
+    )
+    if st.button(
+        "Rerun GitHub query",
+        disabled=valid_user_id is None or not github_query.strip(),
+    ):
+        st.session_state.queued_prompt = github_query.strip()
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -187,7 +194,7 @@ else:
     prompt = st.chat_input(
         "Ask about math, web search, or GitHub...",
         disabled=valid_user_id is None,
-    )
+    ) or st.session_state.pop("queued_prompt", None)
 
     if prompt:
         add_message("user", prompt)

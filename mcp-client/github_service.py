@@ -39,7 +39,8 @@ def get_github_user(token: str):
     )
 
     if response.status_code != 200:
-        raise HTTPException(status_code=502, detail="Failed to fetch GitHub profile")
+        print("Failed  at get_github_user")
+        return None
 
     return response.json()
 
