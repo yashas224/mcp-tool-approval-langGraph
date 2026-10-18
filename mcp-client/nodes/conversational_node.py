@@ -35,7 +35,7 @@ def get_model():
 def conversational_node(state: MessagesState):
     model_chain = get_model()
     messages: list[AnyMessage] = state.get("messages", [])
-    last_5_messages = messages[-5:]
+    last_5_messages = messages[-10:]
     history = []
     for message in last_5_messages:
         history.append(f"{type(message).__name__} - {message.content}")
