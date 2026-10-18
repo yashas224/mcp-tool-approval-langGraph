@@ -9,11 +9,11 @@ LATEST_MESSAGES_URL = "http://127.0.0.1:8000/conversation/latest"
 REQUEST_TIMEOUT_SECONDS = 120
 
 st.set_page_config(
-    page_title="Approval Assistant",
+    page_title="GitHub Assistant",
     page_icon="AI",
 )
 
-st.title("Approval Assistant")
+st.title("GitHub Assistant")
 
 if "user_id" not in st.session_state:
     st.session_state.user_id = ""

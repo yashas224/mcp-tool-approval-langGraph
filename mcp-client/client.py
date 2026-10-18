@@ -192,7 +192,7 @@ async def gitHubCallBack(request: FastAPIRequest , code: str = None, state: str 
         else:
             response = await app.state.agent.ainvoke(Command(resume={"action": "auth-Failed"}), config)
             return RedirectResponse(
-            f"http://127.0.0.1:8501/?github_auth=complete&user_id={user_id}",
+            f"http://127.0.0.1:8501/?github_auth=failed&user_id={user_id}",
             status_code=303,
             )
     except:
