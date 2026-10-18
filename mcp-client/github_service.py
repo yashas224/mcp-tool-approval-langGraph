@@ -69,3 +69,16 @@ def exchange_code(code: str, verifier: str, user_id: str):
     access_token = data["access_token"]
 
     return access_token
+
+def is_token_valid(token: str) -> bool:
+    if not token: 
+        return False
+    try:
+        r = requests.get(
+            "https://api.github.com/user",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
+            timeout=15,
+        )
+        return r.status_code == 200
+    except Exception as e:
+        return False

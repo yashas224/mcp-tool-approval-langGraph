@@ -12,26 +12,15 @@ from langgraph.checkpoint.memory import InMemorySaver
 from DB.token_storage import oauth_db, token_db
 
 GITHUB_MCP_URL = "https://api.githubcopilot.com/mcp/"
+github_checkpointer = InMemorySaver()       # module level, shared across requests
 
 
-async def git_hub_node(state: SubGraphState, config: RunnableConfig):
+async def github_execution_node(state: SubGraphState, config: RunnableConfig):
     user_id = config["configurable"]["thread_id"]
-    github_checkpointer = InMemorySaver()  # module level, shared across requests
+    state["user_id"]=user_id
+    
 
     access_token = token_db.get(user_id)
-    if not access_token:
-        approved = interrupt(
-            {
-                "MCP Server": "GitHub",
-                "message": "GitHub authorization required",
-            }
-        )
-
-        if approved["action"] == "auth-failed":
-            return {"messages": [HumanMessage(content="Git Hub Authorization Failed")]}
-        access_token = token_db.get(user_id)
-
-    print(f"Access Token {access_token}")
     async with MCPAdapter(
         Client(GITHUB_MCP_URL, auth=BearerAuth(token=access_token)),
     ) as client:
@@ -49,7 +38,7 @@ async def git_hub_node(state: SubGraphState, config: RunnableConfig):
         config = {"configurable": {"thread_id": user_id}}
 
         response = await agent.ainvoke(
-            {"messages": state["user_query"]}, config=config
+            {"messages": state["github_messages"]}, config=config
         )
         print(response)
         if "__interrupt__" in response:
@@ -73,9 +62,7 @@ async def git_hub_node(state: SubGraphState, config: RunnableConfig):
                 }
 
             result = await agent.ainvoke(Command(resume=final_decission), config)
-
-
-        
-    #  build MCP client
-    # build Langchain Agent
-    # invoke agent with user_query
+            return {"messages": result["messages"],
+                    "github_answer": result["messages"][-1],
+                    "git_hub_session_completed":True
+                    }
