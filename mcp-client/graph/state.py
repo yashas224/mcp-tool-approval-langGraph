@@ -35,3 +35,4 @@ class SubGraphState(TypedDict):
     git_hub_session_completed: bool
     user_id: str
     github_auth_token_validated:bool
+    auth_retry:int

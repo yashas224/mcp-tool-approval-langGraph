@@ -2,6 +2,7 @@ import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
+import json
 
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException
@@ -43,6 +44,19 @@ def get_tool_catalog(tools: list[BaseTool]) -> list[dict]:
         }
         for tool in tools
     ]
+
+
+def github_result(state: dict) -> str | None:
+    if state.get("mcpServer") != "github":
+        return None
+    if not state.get("github_auth_token_validated"):
+        return "GitHub authorization failed. Authorize GitHub again and retry your request."
+    if state.get("github_auth_flow"):
+        return "GitHub authorization succeeded. Rerun your GitHub query."
+    if not state.get("git_hub_session_completed"):
+        return "The GitHub request could not be completed. Please try again."
+    answer = state.get("github_answer")
+    return answer.content if answer else "GitHub request completed."
 
 
 @asynccontextmanager
@@ -111,7 +125,7 @@ async def chat(req: Request):
             "thread_id": req.user_id,
             "interrupt": interrupt.value,
         }
-    return {"result": state["messages"][-1].content, "status": "completed"}
+    return {"result": github_result(state) or state["messages"][-1].content, "status": "completed"}
 
 
 @app.post("/resume")
@@ -133,7 +147,8 @@ async def chatR(req: Request):
             "interrupt": interrupt.value,
         }
 
-    return {"result": state["messages"][-1].content, "status": "completed"}
+
+    return {"result": github_result(state) or state["messages"][-1].content, "status": "completed"}
 
 
 @app.get("/github-auth")
@@ -200,9 +215,11 @@ async def gitHubCallBack(request: FastAPIRequest, code: str = None, state: str =
                 f"http://127.0.0.1:8501/?github_auth=failed&user_id={user_id}",
                 status_code=303,
             )
-    except:
-        return {"result": "GitHub Auth Failed", "status": "completed"}
-
+    except Exception as e :
+            return RedirectResponse(
+                f"http://127.0.0.1:8501/?github_auth=failed&user_id={user_id}",
+                status_code=303,
+            )
 
 def getGitHubUser(user_id: str):
     token = token_db.get(user_id, None)
@@ -219,8 +236,8 @@ async def latest_messages(
 ):
     config = {"configurable": {"thread_id": user_id}}
     snapshot = await app.state.agent.aget_state(config)
-    github_query = snapshot.values.get("user_query", [])
-    auth_result=f"Successfully authorized : GitHub Account {userJson}" if userJson else "Authorization Failed"
+    github_query = snapshot.values.get("user_query", "")
+    auth_result=f"Successfully authorized : GitHub Account:  {userJson["name"]}, {userJson["login"]}" if userJson else "Authorization Failed"
 
     return {
         "result": f"{auth_result} \n Rerun the github Query",
