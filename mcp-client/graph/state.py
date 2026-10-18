@@ -11,6 +11,7 @@ class MessagesState(TypedDict):
     result: str
     query_rating: int
     mcpServer: str
+    github_answer: AnyMessage
 
     tool_selected: str
     tool_call_exist: bool
@@ -18,8 +19,10 @@ class MessagesState(TypedDict):
     total_tools: int
     tool_approved: str
 
+
 class SubGraphState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
     user_query: str
+    github_answer: AnyMessage
     result: str
-    user_id:str
+    user_id: str

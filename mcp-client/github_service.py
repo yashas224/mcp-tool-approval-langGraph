@@ -1,9 +1,10 @@
 import os
 from urllib.parse import urlencode
 
+import requests
 from dotenv import load_dotenv
 from fastapi import HTTPException
-import requests
+
 load_dotenv()
 
 CLIENT_ID = os.environ["CLIENT_ID"]
@@ -43,11 +44,7 @@ def get_github_user(token: str):
     return response.json()
 
 
-def exchange_code(
-    code: str,
-    verifier: str,
-    user_id:str
-):
+def exchange_code(code: str, verifier: str, user_id: str):
     response = requests.post(
         "https://github.com/login/oauth/access_token",
         data={
@@ -69,6 +66,6 @@ def exchange_code(
     if "access_token" not in data:
         raise HTTPException(status_code=400, detail="OAuth token exchange failed")
 
-    access_token=data["access_token"]
+    access_token = data["access_token"]
 
     return access_token

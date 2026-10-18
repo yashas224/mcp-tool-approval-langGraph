@@ -1,2 +1,2 @@
-token_db= {}
-oauth_db={}
+token_db = {}
+oauth_db = {}

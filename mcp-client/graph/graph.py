@@ -1,3 +1,4 @@
+from graph.github_subgraph import github_sub_graph
 from graph.state import MessagesState
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, StateGraph
@@ -6,7 +7,7 @@ from nodes.conversational_node import conversational_node
 from nodes.sanity_node import agentGaurdNode
 from nodes.tool_executor_node import create_tool_executor_node
 from nodes.tool_selector_node import create_tool_selector_node
-from graph.github_subgraph import github_sub_graph
+
 
 def build_graph(tools, tool_catalog):
     def tool_call_present(state: MessagesState):
@@ -38,7 +39,7 @@ def build_graph(tools, tool_catalog):
         .add_node("approval_node", approval_node)
         .add_node("tool_executor_node", create_tool_executor_node(tools=tools))
         .add_node("conversational_node", conversational_node)
-        .add_node("github-subgraph",github_sub_graph)
+        .add_node("github-subgraph", github_sub_graph)
         .set_entry_point("agent_gaurd_node")
         .add_conditional_edges(
             "agent_gaurd_node",

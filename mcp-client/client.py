@@ -1,29 +1,33 @@
+import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
-import secrets
 from typing import Annotated
-from fastapi.responses import RedirectResponse
-from langchain_core.messages import AIMessage, HumanMessage
-from starlette.middleware.sessions import SessionMiddleware
-
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Header, Request as FastAPIRequest
-from graph.graph import build_graph
-from langchain.mcp import MCPAdapter
-from langchain.tools import BaseTool
-from langchain_core.runnables import RunnableConfig
-from langgraph.types import Command
-from pydantic import BaseModel
-from util import generate_pkce
+from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Request as FastAPIRequest
+from fastapi.responses import RedirectResponse
 from github_service import (
     REDIRECT_URI,
     SESSION_SECRET,
     build_github_authorization_url,
     exchange_code,
+    get_github_user,
 )
-from DB.token_storage import oauth_db,token_db
+from graph.graph import build_graph
+from langchain.mcp import MCPAdapter
+from langchain.tools import BaseTool
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.runnables import RunnableConfig
+from langgraph.types import Command
+from pydantic import BaseModel
+from starlette.middleware.sessions import SessionMiddleware
+
+from DB.token_storage import oauth_db, token_db
+from util import generate_pkce
+
 load_dotenv()
+
 
 class Request(BaseModel):
     user_id: str
@@ -136,45 +140,42 @@ async def chatR(req: Request):
 def githubAuth(request: FastAPIRequest, user_id: Annotated[str | None, Header()]):
     verifier, challenge = generate_pkce()
     oauth_state = secrets.token_urlsafe(32)
-    oauth_transactions={
-        "code_verifier":verifier,
-        "user_id":user_id
-    }
-    oauth_db[oauth_state]=oauth_transactions
-    
+    oauth_transactions = {"code_verifier": verifier, "user_id": user_id}
+    oauth_db[oauth_state] = oauth_transactions
+
     authorization_url = build_github_authorization_url(
         state=oauth_state,
         code_challenge=challenge,
     )
 
-    return {"authorization_url":authorization_url}
+    return {"authorization_url": authorization_url}
 
 
 @app.get("/callback/")
-async def gitHubCallBack(request: FastAPIRequest , code: str = None, state: str = None):
+async def gitHubCallBack(request: FastAPIRequest, code: str = None, state: str = None):
     try:
         error = request.query_params.get("error")
 
         if error == "access_denied":
-            return {"result": "Authorization cancelled, You declined GitHub authorization ", "status": "completed"}   
+            return {
+                "result": "Authorization cancelled, You declined GitHub authorization ",
+                "status": "completed",
+            }
 
-
-        if not code or not state :
+        if not code or not state:
             raise HTTPException(status_code=400, detail="Missing OAuth parameters")
 
-
-        retrived_state = oauth_db.pop(state,None)
+        retrived_state = oauth_db.pop(state, None)
         if not retrived_state:
             raise HTTPException(status_code=400, detail="Missing State")
 
-        verifier = retrived_state.get("code_verifier",None)
-        user_id = retrived_state.get("user_id",None)
+        verifier = retrived_state.get("code_verifier", None)
+        user_id = retrived_state.get("user_id", None)
 
         if not verifier:
             raise HTTPException(status_code=400, detail="Missing PKCE verifier")
 
-        token = exchange_code(code, verifier,user_id)
-
+        token = exchange_code(code, verifier, user_id)
 
         config: RunnableConfig = {
             "configurable": {
@@ -182,44 +183,62 @@ async def gitHubCallBack(request: FastAPIRequest , code: str = None, state: str 
             }
         }
 
-        if  token and  token.strip():
-            token_db[user_id]=token
-            response = await app.state.agent.ainvoke(Command(resume={"action": "auth-Complete"}), config)
+        if token and token.strip():
+            token_db[user_id] = token
+            response = await app.state.agent.ainvoke(
+                Command(resume={"action": "auth-Complete"}), config
+            )
             return RedirectResponse(
-            f"http://127.0.0.1:8501/?github_auth=complete&user_id={user_id}",
-            status_code=303,
-            )        
+                f"http://127.0.0.1:8501/?github_auth=complete&user_id={user_id}",
+                status_code=303,
+            )
         else:
-            response = await app.state.agent.ainvoke(Command(resume={"action": "auth-Failed"}), config)
+            response = await app.state.agent.ainvoke(
+                Command(resume={"action": "auth-Failed"}), config
+            )
             return RedirectResponse(
-            f"http://127.0.0.1:8501/?github_auth=failed&user_id={user_id}",
-            status_code=303,
+                f"http://127.0.0.1:8501/?github_auth=failed&user_id={user_id}",
+                status_code=303,
             )
     except:
-        return {"result": "GitHub Auth Failed", "status": "completed"}   
+        return {"result": "GitHub Auth Failed", "status": "completed"}
+
+
+def getGitHubUser(userId: str):
+    token = token_db.get(token_db, None)
+    if not token:
+        userJson = get_github_user(token=token)
+        return userJson
+    else:
+        None
 
 
 @app.get("/conversation/latest")
-async def latest_messages(user_id: str):
+async def latest_messages(
+    user_id: str, userJson=Annotated[dict, Depends(getGitHubUser)]
+):
     config = {"configurable": {"thread_id": user_id}}
     snapshot = await app.state.agent.aget_state(config)
     messages = snapshot.values.get("messages", [])
     latest_human = next(
-        (message.content for message in reversed(messages) if isinstance(message,HumanMessage)),
+        (
+            message.content
+            for message in reversed(messages)
+            if isinstance(message, HumanMessage)
+        ),
         None,
     )
     latest_ai = next(
-        (message.content for message in reversed(messages) if isinstance(message,AIMessage)),
+        (
+            message.content
+            for message in reversed(messages)
+            if isinstance(message, AIMessage)
+        ),
         None,
     )
 
     return {
+        "result": f"successfully authorized to {userJson} ",
         "latest_human": latest_human,
         "latest_ai": latest_ai,
     }
-
-
-
-
-
-
