@@ -17,6 +17,8 @@ def git_token_validator_node(state: SubGraphState, config: RunnableConfig):
     user_id = config["configurable"]["thread_id"]
     isValid = is_token_valid(token_db.get(user_id, None))
     return {
+        "github_messages": HumanMessage(content=state["user_query"]),
+        "github_auth_flow":False,
         "git_hub_session_completed": False,
         "github_auth_token_validated": isValid,
         "auth_retry": 0,

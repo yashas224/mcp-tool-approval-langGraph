@@ -28,6 +28,5 @@ def github_token_interupt_node(state: SubGraphState):
         return {
             "github_auth_token_validated": True,
             "github_auth_flow": True,
-            "github_messages": HumanMessage(content=state["user_query"]),
             "auth_retry": 0,
         }
