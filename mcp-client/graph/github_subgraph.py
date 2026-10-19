@@ -23,6 +23,8 @@ def auth_check(state: SubGraphState):
     if state["auth_retry"] ==2:
         return "authenticated-failed"
     return "auth-retry"
+def route_after_execution(state):
+    return "pending_aproval" if state.get("github_approval_pending") else "task_complete"
 
 def is_token_valid_condition(state: SubGraphState, config: RunnableConfig):
     user_id = config["configurable"]["thread_id"]
@@ -46,7 +48,10 @@ sub_graph_builder.add_conditional_edges("github_token_interupt_node",auth_check,
                                             "auth-retry":"github_token_interupt_node",
                                             "authenticated-failed":END
                                         })
-sub_graph_builder.add_edge("github_execution_node", END)
+sub_graph_builder.add_edge("github_execution_node",route_after_execution,{
+"pending_aproval":"github_execution_node",
+"task_complete":END
+} )
 github_sub_graph = sub_graph_builder.compile()
 
 

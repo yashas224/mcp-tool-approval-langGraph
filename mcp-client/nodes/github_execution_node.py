@@ -37,22 +37,32 @@ async def github_execution_node(state: SubGraphState, config: RunnableConfig):
         )
         config = {"configurable": {"thread_id": user_id}}
 
-        response = await agent.ainvoke(
-            {"messages": state["github_messages"]}, config=config
-        )
-        print(response)
-        if "__interrupt__" in response:
-            decision = interrupt(response["__interrupt__"][0].value)
-            if decision.get("action")== "approved":
-                final_decission= {
+        github_agent_state= await agent.aget_state(config)
+        if  github_agent_state.next:
+            pending = next((i.value for t in github_agent_state.tasks for i in t.interrupts), None)
+        else:
+            response = await agent.ainvoke(
+                {"messages": state["github_messages"]}, config=config
+            )
+            if "__interrupt__" not in response:
+                return {"messages": response["messages"],
+                    "github_answer": response["messages"][-1],
+                    "git_hub_session_completed":True
+                    }
+            pending = response["__interrupt__"][0].value
+
+
+        decision = interrupt(pending)
+        if decision.get("action")== "approved":
+             final_decission= {
                     "decisions": [
                         {
                             "type": "approve",
                         }
                     ]
                 }
-            else:
-                final_decission= {
+        else:
+            final_decission= {
                     "decisions": [
                         {
                             "type": "reject",
@@ -61,8 +71,13 @@ async def github_execution_node(state: SubGraphState, config: RunnableConfig):
                     ]
                 }
 
-            result = await agent.ainvoke(Command(resume=final_decission), config)
-            return {"messages": result["messages"],
+        result = await agent.ainvoke(Command(resume=final_decission), config)
+        is_interrupt=False
+        if "__interrupt__" in result:
+            is_interrupt=True
+            return {"git_hub_approval_pending":is_interrupt}
+        return {"messages": result["messages"],
                     "github_answer": result["messages"][-1],
-                    "git_hub_session_completed":True
+                    "git_hub_session_completed":True,
+                    "git_hub_approval_pending":is_interrupt
                     }

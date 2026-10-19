@@ -36,3 +36,4 @@ class SubGraphState(TypedDict):
     user_id: str
     github_auth_token_validated:bool
     auth_retry:int
+    git_hub_approval_pending:bool
