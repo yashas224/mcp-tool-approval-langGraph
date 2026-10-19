@@ -1,8 +1,8 @@
+import json
 import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
-import json
 
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException
@@ -125,7 +125,10 @@ async def chat(req: Request):
             "thread_id": req.user_id,
             "interrupt": interrupt.value,
         }
-    return {"result": github_result(state) or state["messages"][-1].content, "status": "completed"}
+    return {
+        "result": github_result(state) or state["messages"][-1].content,
+        "status": "completed",
+    }
 
 
 @app.post("/resume")
@@ -147,8 +150,10 @@ async def chatR(req: Request):
             "interrupt": interrupt.value,
         }
 
-
-    return {"result": github_result(state) or state["messages"][-1].content, "status": "completed"}
+    return {
+        "result": github_result(state) or state["messages"][-1].content,
+        "status": "completed",
+    }
 
 
 @app.get("/github-auth")
@@ -215,11 +220,12 @@ async def gitHubCallBack(request: FastAPIRequest, code: str = None, state: str =
                 f"http://127.0.0.1:8501/?github_auth=failed&user_id={user_id}",
                 status_code=303,
             )
-    except Exception as e :
-            return RedirectResponse(
-                f"http://127.0.0.1:8501/?github_auth=failed&user_id={user_id}",
-                status_code=303,
-            )
+    except Exception as e:
+        return RedirectResponse(
+            f"http://127.0.0.1:8501/?github_auth=failed&user_id={user_id}",
+            status_code=303,
+        )
+
 
 def getGitHubUser(user_id: str):
     token = token_db.get(user_id, None)
@@ -232,12 +238,16 @@ def getGitHubUser(user_id: str):
 
 @app.get("/conversation/latest")
 async def latest_messages(
-    user_id: str, userJson:Annotated[dict, Depends(getGitHubUser)]
+    user_id: str, userJson: Annotated[dict, Depends(getGitHubUser)]
 ):
     config = {"configurable": {"thread_id": user_id}}
     snapshot = await app.state.agent.aget_state(config)
     github_query = snapshot.values.get("user_query", "")
-    auth_result=f"Successfully authorized : GitHub Account:  {userJson["name"]}, {userJson["login"]}" if userJson else "Authorization Failed"
+    auth_result = (
+        f"Successfully authorized : GitHub Account:  {userJson["name"]}, {userJson["login"]}"
+        if userJson
+        else "Authorization Failed"
+    )
 
     return {
         "result": f"{auth_result} \n Rerun the github Query",

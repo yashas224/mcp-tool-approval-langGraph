@@ -19,21 +19,19 @@ class MessagesState(TypedDict):
     total_tools: int
     tool_approved: str
 
-    github_auth_flow:bool
-    github_auth_token_validated:bool
-    git_hub_session_completed:bool
+    github_auth_flow: bool
+    github_auth_token_validated: bool
+    git_hub_session_completed: bool
     github_messages: Annotated[list[AnyMessage], add_messages]
 
 
-
-
 class SubGraphState(TypedDict):
-    github_auth_flow:bool
+    github_auth_flow: bool
     github_messages: Annotated[list[AnyMessage], add_messages]
     user_query: str
     github_answer: AnyMessage
     git_hub_session_completed: bool
     user_id: str
-    github_auth_token_validated:bool
-    auth_retry:int
-    git_hub_approval_pending:bool
+    github_auth_token_validated: bool
+    auth_retry: int
+    git_hub_approval_pending: bool

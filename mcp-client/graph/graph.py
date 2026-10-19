@@ -36,7 +36,7 @@ def build_graph(tools, tool_catalog):
             return "github-op-failed"
         elif state["github_auth_flow"]:
             return "github_auth_flow"
-        
+
         return "github-op-cmpleted"
 
     checkpointer = InMemorySaver()
@@ -61,7 +61,7 @@ def build_graph(tools, tool_catalog):
             tool_call_present,
             {"approval": "approval_node", "no-tool-selected": "conversational_node"},
         )
-        .add_edge("github-subgraph","conversational_node")
+        .add_edge("github-subgraph", "conversational_node")
         .add_conditional_edges(
             "approval_node",
             approved_tool_execution,

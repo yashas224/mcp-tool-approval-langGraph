@@ -1,6 +1,6 @@
-import secrets
-import hashlib
 import base64
+import hashlib
+import secrets
 
 
 def generate_pkce():
