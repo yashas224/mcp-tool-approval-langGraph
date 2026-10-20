@@ -1,10 +1,13 @@
+from typing import Literal
+
 from graph.state import MessagesState
 from langchain.agents import create_agent
 from pydantic import BaseModel, Field
 
 
 class ToolProposal(BaseModel):
-    tool_selected: str | None = Field(
+    tool_selected: Literal["web_search_tavilyWebSearch",
+     "math_add_tool","math_multiply"] = Field(
         default=None,
         description="The selected tool name, or null when no tool is needed.",
     )

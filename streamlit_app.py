@@ -68,6 +68,7 @@ if github_auth_status == "complete" and callback_user_id:
         st.session_state.latest_conversation = response.json()
         st.session_state.pending_interrupt = None
         st.session_state.pop("github_authorization_url", None)
+        st.session_state.pop("github_app_install_clicked", None)
         st.query_params.clear()
     except requests.exceptions.RequestException as error:
         st.error(f"Could not restore the conversation: {error}")
@@ -97,7 +98,12 @@ if latest_conversation:
     st.write(latest_conversation.get("result") or "No user message found.")
     install_url = latest_conversation.get("install_url")
     if install_url:
-        st.link_button("Install GitHub App", install_url)
+        st.write("Proceed to install the GitHub App.")
+        if st.button("Install GitHub App"):
+            st.session_state.github_app_install_clicked = True
+        if st.session_state.get("github_app_install_clicked"):
+            st.link_button("Open GitHub App installation", install_url)
+            st.write("Rerun the github Query")
     github_query = st.text_input(
         "GitHub query",
         value=str(latest_conversation.get("github_query") or ""),
