@@ -252,7 +252,7 @@ async def latest_messages(
     )
 
     return {
-        "result": f"{auth_result} \n Rerun the github Query",
+        "result": auth_result,
         "github_query": github_query,
-        "install_url": os.getenv("github_app_install_url")
+        "install_url": os.getenv("github_app_install_url") if userJson else None,
     }
