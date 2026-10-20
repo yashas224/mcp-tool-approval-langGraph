@@ -26,6 +26,7 @@ class MessagesState(TypedDict):
 
 
 class SubGraphState(TypedDict):
+    messages: Annotated[list[AnyMessage], add_messages]
     github_auth_flow: bool
     github_messages: Annotated[list[AnyMessage], add_messages]
     user_query: str

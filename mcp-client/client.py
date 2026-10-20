@@ -26,7 +26,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from DB.token_storage import oauth_db, token_db
 from util import generate_pkce
-
+import os
 load_dotenv()
 
 
@@ -240,6 +240,7 @@ def getGitHubUser(user_id: str):
 async def latest_messages(
     user_id: str, userJson: Annotated[dict, Depends(getGitHubUser)]
 ):
+    
     config = {"configurable": {"thread_id": user_id}}
     snapshot = await app.state.agent.aget_state(config)
     github_query = snapshot.values.get("user_query", "")
@@ -252,4 +253,5 @@ async def latest_messages(
     return {
         "result": f"{auth_result} \n Rerun the github Query",
         "github_query": github_query,
+        "install_url": os.getenv("github_app_install_url")
     }

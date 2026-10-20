@@ -33,17 +33,20 @@ async def github_execution_node(state: SubGraphState, config: RunnableConfig):
                 )
             ],
             checkpointer=github_checkpointer,
+            system_prompt="You are an github MCP assistant that only selects and invokes tools linked"
         )
         config = {"configurable": {"thread_id": user_id}}
 
         github_agent_state = await agent.aget_state(config)
         if github_agent_state.next:
+            # when intrupt , next != empty
             pending = next(
                 (i.value for t in github_agent_state.tasks for i in t.interrupts), None
             )
         else:
+            # Empty () means the graph is complete. Its a new run for the agent
             response = await agent.ainvoke(
-                {"messages": state["github_messages"]}, config=config
+                {"messages": state["messages"]}, config=config
             )
             if "__interrupt__" not in response:
                 return {
