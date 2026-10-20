@@ -95,6 +95,9 @@ latest_conversation = st.session_state.get("latest_conversation")
 if latest_conversation:
     st.markdown("GitHub Authentication")
     st.write(latest_conversation.get("result") or "No user message found.")
+    install_url = latest_conversation.get("install_url")
+    if install_url:
+        st.link_button("Install GitHub App", install_url)
     github_query = st.text_input(
         "GitHub query",
         value=str(latest_conversation.get("github_query") or ""),

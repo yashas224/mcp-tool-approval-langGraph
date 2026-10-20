@@ -1,4 +1,5 @@
 import json
+import os
 import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -26,7 +27,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from DB.token_storage import oauth_db, token_db
 from util import generate_pkce
-import os
+
 load_dotenv()
 
 
