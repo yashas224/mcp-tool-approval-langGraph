@@ -27,7 +27,7 @@ def auth_check(state: SubGraphState):
 
 def route_after_execution(state):
     return (
-        "pending_aproval" if state.get("github_approval_pending") else "task_complete"
+        "pending_aproval" if state.get("git_hub_approval_pending") else "task_complete"
     )
 
 

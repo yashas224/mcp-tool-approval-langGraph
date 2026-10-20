@@ -6,8 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class ToolProposal(BaseModel):
-    tool_selected: Literal["web_search_tavilyWebSearch",
-     "math_add_tool","math_multiply"] = Field(
+    tool_selected: Literal["web_search_tavilyWebSearch", "math_add_tool", "math_multiply"] | None = Field(
         default=None,
         description="The selected tool name, or null when no tool is needed.",
     )
