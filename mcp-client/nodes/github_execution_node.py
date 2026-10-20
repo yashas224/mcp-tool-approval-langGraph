@@ -54,23 +54,18 @@ async def github_execution_node(state: SubGraphState, config: RunnableConfig):
             pending = response["__interrupt__"][0].value
 
         decision = interrupt(pending)
+        action_count = len(pending["action_requests"])
         if decision.get("action") == "approved":
-            final_decission = {
-                "decisions": [
-                    {
-                        "type": "approve",
-                    }
-                ]
-            }
+            decisions = [{"type": "approve"} for _ in range(action_count)]
         else:
-            final_decission = {
-                "decisions": [
-                    {
-                        "type": "reject",
-                        "message": "User rejected this action. Do not retry this tool call.",
-                    }
-                ]
-            }
+            decisions = [
+                {
+                    "type": "reject",
+                    "message": "You rejected this action. Do not retry this tool call.",
+                }
+                for _ in range(action_count)
+            ]
+        final_decission = {"decisions": decisions}
 
         result = await agent.ainvoke(Command(resume=final_decission), config)
         is_interrupt = False
