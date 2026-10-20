@@ -20,7 +20,7 @@ def build_github_authorization_url(
     params = {
         "client_id": CLIENT_ID,
         "redirect_uri": REDIRECT_URI,
-        "scope": "read:user",
+        "scope": "write:org",
         "state": state,
         "code_challenge": code_challenge,
         "code_challenge_method": "S256",
