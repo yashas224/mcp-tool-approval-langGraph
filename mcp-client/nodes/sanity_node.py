@@ -34,7 +34,7 @@ prompt = """
     Rate the User Query from 1 to 10 based on how  close is it to the defined System Policy
     """
 template = ChatPromptTemplate(
-    [("system", f"System Policy:{policy}"), ("system", prompt)]
+    [("system", f"System Policy:{policy}"), ("human", prompt)]
 )
 model_chain = template | model
 

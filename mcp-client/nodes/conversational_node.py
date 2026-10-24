@@ -26,7 +26,7 @@ def get_model():
     Continue or end the conversation based on the user Query and the message hostory. Be polite. 
     """
     template = ChatPromptTemplate(
-        [("system", f"System Policy:{policy}"), ("system", prompt)]
+        [("system", f"System Policy:{policy}"), ("human", prompt)]
     )
     model_chain = template | model
     return model_chain
