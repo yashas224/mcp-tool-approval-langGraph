@@ -1,3 +1,5 @@
+from urllib.parse import urlencode
+
 import requests
 import streamlit as st
 
@@ -135,7 +137,6 @@ if github_auth_status == "complete" and callback_user_id:
         response.raise_for_status()
         st.session_state.latest_conversation = response.json()
         st.session_state.pending_interrupt = None
-        st.session_state.pop("github_authorization_url", None)
         st.session_state.pop("github_app_install_clicked", None)
         st.query_params.clear()
     except requests.exceptions.RequestException as error:
@@ -249,25 +250,14 @@ if st.session_state.pending_interrupt:
         st.json(pending_interrupt)
 
     if is_github_auth:
-        if st.button(
-            "🔑 Authorize GitHub", type="primary", disabled=valid_user_id is None
-        ):
-            try:
-                response = requests.get(
-                    GITHUB_AUTH_URL,
-                    headers={"user-id": valid_user_id},
-                    timeout=REQUEST_TIMEOUT_SECONDS,
-                )
-                response.raise_for_status()
-                st.session_state.github_authorization_url = response.json()[
-                    "authorization_url"
-                ]
-            except requests.exceptions.RequestException as error:
-                st.error(f"Could not start GitHub authorization: {error}")
-
-        authorization_url = st.session_state.get("github_authorization_url")
-        if authorization_url:
-            st.link_button("Continue to GitHub ↗", authorization_url)
+        # The browser must open /github-auth itself so the OAuth session
+        # cookie is stored in the browser, not in the Streamlit server.
+        st.link_button(
+            "🔑 Authorize GitHub ↗",
+            f"{GITHUB_AUTH_URL}?{urlencode({'user_id': valid_user_id or ''})}",
+            type="primary",
+            disabled=valid_user_id is None,
+        )
     else:
         accept_column, reject_column = st.columns(2)
 

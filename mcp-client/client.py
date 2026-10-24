@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Annotated
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi import Request as FastAPIRequest
 from fastapi.responses import RedirectResponse
 from github_service import (
@@ -158,18 +158,27 @@ async def chatR(req: Request):
 
 
 @app.get("/github-auth")
-def githubAuth(request: FastAPIRequest, user_id: Annotated[str | None, Header()]):
+def githubAuth(request: FastAPIRequest, user_id: str):
     verifier, challenge = generate_pkce()
     oauth_state = secrets.token_urlsafe(32)
     oauth_transactions = {"code_verifier": verifier, "user_id": user_id}
     oauth_db[oauth_state] = oauth_transactions
+    request.session["oauth"]= {
+        "state":oauth_state,
+        "oauth_transactions":oauth_transactions
 
+
+    }
     authorization_url = build_github_authorization_url(
         state=oauth_state,
         code_challenge=challenge,
     )
 
-    return {"authorization_url": authorization_url}
+    return   RedirectResponse(
+                authorization_url,
+        status_code=302,
+
+    )
 
 
 @app.get("/callback/")
@@ -186,12 +195,14 @@ async def gitHubCallBack(request: FastAPIRequest, code: str = None, state: str =
         if not code or not state:
             raise HTTPException(status_code=400, detail="Missing OAuth parameters")
 
-        retrived_state = oauth_db.pop(state, None)
-        if not retrived_state:
+        retrived_state = request.session.pop("oauth", None)
+        if not retrived_state or not secrets.compare_digest(
+            retrived_state["state"], state
+        ):
             raise HTTPException(status_code=400, detail="Missing State")
 
-        verifier = retrived_state.get("code_verifier", None)
-        user_id = retrived_state.get("user_id", None)
+        verifier = retrived_state.get("oauth_transactions").get("code_verifier", None)
+        user_id = retrived_state.get("oauth_transactions").get("user_id", None)
 
         if not verifier:
             raise HTTPException(status_code=400, detail="Missing PKCE verifier")
@@ -221,9 +232,10 @@ async def gitHubCallBack(request: FastAPIRequest, code: str = None, state: str =
                 f"http://127.0.0.1:8501/?github_auth=failed&user_id={user_id}",
                 status_code=303,
             )
-    except Exception as e:
+    except Exception:
+        # user_id may not be known yet (e.g. state mismatch), so leave it out
         return RedirectResponse(
-            f"http://127.0.0.1:8501/?github_auth=failed&user_id={user_id}",
+            "http://127.0.0.1:8501/?github_auth=failed",
             status_code=303,
         )
 
