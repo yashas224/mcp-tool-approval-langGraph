@@ -8,11 +8,79 @@ LATEST_MESSAGES_URL = "http://127.0.0.1:8000/conversation/latest"
 REQUEST_TIMEOUT_SECONDS = 120
 
 st.set_page_config(
-    page_title="GitHub Assistant",
-    page_icon="AI",
+    page_title="RepoPilot",
+    page_icon="🐙",
+    layout="centered",
 )
 
-st.title("GitHub Assistant")
+st.markdown(
+    """
+    <style>
+    .hero {
+        padding: 1.6rem 1.8rem;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #24292f 0%, #2f3b52 55%, #6e40c9 100%);
+        color: #ffffff;
+        margin-bottom: 1.4rem;
+        box-shadow: 0 8px 24px rgba(36, 41, 47, 0.25);
+    }
+    .hero h1 {
+        color: #ffffff;
+        font-size: 2.2rem;
+        margin: 0;
+        padding: 0;
+    }
+    .hero p {
+        color: #d0d7de;
+        margin: 0.35rem 0 0 0;
+        font-size: 1.02rem;
+    }
+    .hero .chips {
+        margin-top: 0.9rem;
+    }
+    .hero .chip {
+        display: inline-block;
+        padding: 0.2rem 0.7rem;
+        margin: 0 0.35rem 0.35rem 0;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        font-size: 0.8rem;
+        color: #ffffff;
+    }
+    .sidebar-brand {
+        font-size: 1.35rem;
+        font-weight: 700;
+        margin-bottom: 0.2rem;
+    }
+    .sidebar-caption {
+        color: #8b949e;
+        font-size: 0.85rem;
+        margin-bottom: 1rem;
+    }
+    div[data-testid="stChatMessage"] {
+        border-radius: 12px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    """
+    <div class="hero">
+        <h1>🐙 RepoPilot</h1>
+        <p>Your GitHub co-pilot — you stay in control.</p>
+        <div class="chips">
+            <span class="chip">🔐 GitHub OAuth</span>
+            <span class="chip">✅ Human-in-the-loop approvals</span>
+            <span class="chip">🧮 Math</span>
+            <span class="chip">🌐 Web search</span>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 if "user_id" not in st.session_state:
     st.session_state.user_id = ""
@@ -77,8 +145,14 @@ elif github_auth_status == "failed":
     st.query_params.clear()
 
 
+st.sidebar.markdown(
+    '<div class="sidebar-brand">🐙 RepoPilot</div>'
+    '<div class="sidebar-caption">Session settings</div>',
+    unsafe_allow_html=True,
+)
+
 user_id_input = st.sidebar.text_input(
-    "User ID",
+    "🪪 User ID",
     value=st.session_state.user_id,
     placeholder="Enter a UUID",
     help="Use the same UUID to keep the same  conversation and resume approvals.",
@@ -88,34 +162,74 @@ valid_user_id = validate_user_id(user_id_input)
 
 if valid_user_id:
     st.session_state.user_id = valid_user_id
-    st.sidebar.success("Valid user ID")
+    st.sidebar.success("Connected as a valid user", icon="✅")
 else:
-    st.sidebar.warning("Enter a valid user_id to start or resume a conversation.")
+    st.sidebar.warning(
+        "Enter a valid user_id to start or resume a conversation.", icon="⚠️"
+    )
+
+st.sidebar.divider()
+st.sidebar.markdown(
+    "**What I can do**\n"
+    "- 📂 Browse repos, issues & PRs\n"
+    "- ✍️ Create or update GitHub content\n"
+    "- 🧮 Solve math problems\n"
+    "- 🌐 Search the web\n\n"
+    "Every sensitive action waits for your **approval**."
+)
+st.sidebar.divider()
+if st.sidebar.button("🧹 Clear chat", use_container_width=True):
+    st.session_state.messages = []
+    st.session_state.pending_interrupt = None
+    st.rerun()
+
+AVATARS = {"user": "🧑‍💻", "assistant": "🐙"}
 
 latest_conversation = st.session_state.get("latest_conversation")
 if latest_conversation:
-    st.markdown("GitHub Authentication")
-    st.write(latest_conversation.get("result") or "No user message found.")
-    install_url = latest_conversation.get("install_url")
-    if install_url:
-        st.write("Proceed to install the GitHub App.")
-        if st.button("Install GitHub App"):
-            st.session_state.github_app_install_clicked = True
-        if st.session_state.get("github_app_install_clicked"):
-            st.link_button("Open GitHub App installation", install_url)
-            st.write("Rerun the github Query")
-    github_query = st.text_input(
-        "GitHub query",
-        value=str(latest_conversation.get("github_query") or ""),
-    )
-    if st.button(
-        "Rerun GitHub query",
-        disabled=valid_user_id is None or not github_query.strip(),
-    ):
-        st.session_state.queued_prompt = github_query.strip()
+    with st.container(border=True):
+        st.subheader("🔐 GitHub Authentication")
+        st.write(latest_conversation.get("result") or "No user message found.")
+        install_url = latest_conversation.get("install_url")
+        if install_url:
+            st.info("Proceed to install the GitHub App.", icon="📦")
+            if st.button("Install GitHub App"):
+                st.session_state.github_app_install_clicked = True
+            if st.session_state.get("github_app_install_clicked"):
+                st.link_button("Open GitHub App installation ↗", install_url)
+                st.caption("Once installed, rerun your GitHub query below.")
+        github_query = st.text_input(
+            "GitHub query",
+            value=str(latest_conversation.get("github_query") or ""),
+        )
+        if st.button(
+            "🔁 Rerun GitHub query",
+            type="primary",
+            disabled=valid_user_id is None or not github_query.strip(),
+        ):
+            st.session_state.queued_prompt = github_query.strip()
+
+if not st.session_state.messages and not st.session_state.pending_interrupt:
+    st.markdown("##### 💡 Try asking")
+    suggestions = [
+        "List my GitHub repositories",
+        "Show open issues in my latest repo",
+        "What is 37 * 49 + 12?",
+        "Search the web for LangGraph news",
+    ]
+    suggestion_columns = st.columns(2)
+    for index, suggestion in enumerate(suggestions):
+        with suggestion_columns[index % 2]:
+            if st.button(
+                suggestion,
+                key=f"suggestion_{index}",
+                use_container_width=True,
+                disabled=valid_user_id is None,
+            ):
+                st.session_state.queued_prompt = suggestion
 
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
+    with st.chat_message(message["role"], avatar=AVATARS.get(message["role"])):
         st.markdown(message["content"])
 
 
@@ -127,15 +241,17 @@ if st.session_state.pending_interrupt:
     )
 
     if is_github_auth:
-        st.warning("GitHub authorization is required to continue.")
+        st.warning("GitHub authorization is required to continue.", icon="🔐")
     else:
-        st.warning("This action requires your approval.")
+        st.warning("This action requires your approval.", icon="🛑")
 
-    with st.expander("Pending tool action", expanded=True):
+    with st.expander("🔍 Pending tool action", expanded=True):
         st.json(pending_interrupt)
 
     if is_github_auth:
-        if st.button("Authorize GitHub", disabled=valid_user_id is None):
+        if st.button(
+            "🔑 Authorize GitHub", type="primary", disabled=valid_user_id is None
+        ):
             try:
                 response = requests.get(
                     GITHUB_AUTH_URL,
@@ -151,13 +267,13 @@ if st.session_state.pending_interrupt:
 
         authorization_url = st.session_state.get("github_authorization_url")
         if authorization_url:
-            st.link_button("Continue to GitHub", authorization_url)
+            st.link_button("Continue to GitHub ↗", authorization_url)
     else:
         accept_column, reject_column = st.columns(2)
 
         with accept_column:
             accept = st.button(
-                "Accept",
+                "✅ Accept",
                 type="primary",
                 use_container_width=True,
                 disabled=valid_user_id is None,
@@ -165,7 +281,7 @@ if st.session_state.pending_interrupt:
 
         with reject_column:
             reject = st.button(
-                "Reject",
+                "❌ Reject",
                 use_container_width=True,
                 disabled=valid_user_id is None,
             )
@@ -200,17 +316,20 @@ if st.session_state.pending_interrupt:
 
 else:
     prompt = st.chat_input(
-        "Ask about math, web search, or GitHub...",
+        "Ask RepoPilot about your repos, math, or the web...",
         disabled=valid_user_id is None,
     ) or st.session_state.pop("queued_prompt", None)
 
     if prompt:
         add_message("user", prompt)
 
-        with st.chat_message("user"):
+        with st.chat_message("user", avatar=AVATARS["user"]):
             st.markdown(prompt)
 
-        with st.chat_message("assistant"), st.spinner("Working..."):
+        with (
+            st.chat_message("assistant", avatar=AVATARS["assistant"]),
+            st.spinner("RepoPilot is thinking..."),
+        ):
             try:
                 response = requests.post(
                     CHAT_API_URL,
