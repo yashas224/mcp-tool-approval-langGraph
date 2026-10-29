@@ -35,6 +35,7 @@ load_dotenv()
 class Request(BaseModel):
     user_id: str
     query: str | None = None
+    user_message: str | None = None
 
 
 def get_tool_catalog(tools: list[BaseTool]) -> list[dict]:
@@ -140,7 +141,7 @@ async def chatR(req: Request):
             "thread_id": req.user_id,
         }
     }
-    state = await app.state.agent.ainvoke(Command(resume={"action": req.query}), config)
+    state = await app.state.agent.ainvoke(Command(resume={"action": req.query,"user_message":req.user_message}), config)
     interrupts = state.get("__interrupt__", [])
 
     if interrupts:

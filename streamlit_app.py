@@ -112,12 +112,13 @@ def validate_user_id(value: str) -> str | None:
         return None
 
 
-def call_resume(user_id: str, action: str) -> dict:
+def call_resume(user_id: str, action: str, user_message: str | None = None) -> dict:
     response = requests.post(
         RESUME_API_URL,
         json={
             "user_id": user_id,
             "query": action,
+            "user_message": user_message,
         },
         timeout=REQUEST_TIMEOUT_SECONDS,
     )
@@ -290,6 +291,12 @@ if st.session_state.pending_interrupt:
             disabled=valid_user_id is None,
         )
     else:
+        user_message = st.text_input(
+            "💬 Message (optional)",
+            placeholder="Add a message for the agent",
+            disabled=valid_user_id is None,
+        )
+
         accept_column, reject_column = st.columns(2)
 
         with accept_column:
@@ -312,7 +319,9 @@ if st.session_state.pending_interrupt:
 
         with st.spinner("Sending your decision..."):
             try:
-                data = call_resume(valid_user_id, action)
+                data = call_resume(
+                    valid_user_id, action, user_message.strip() or None
+                )
 
                 if data.get("status") == "interrupt":
                     st.session_state.pending_interrupt = data.get("interrupt")

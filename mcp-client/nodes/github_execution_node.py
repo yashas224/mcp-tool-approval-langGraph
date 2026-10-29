@@ -1,3 +1,5 @@
+import json
+
 from fastmcp import Client
 from fastmcp.client.auth import BearerAuth
 from graph.state import SubGraphState
@@ -6,14 +8,24 @@ from langchain.agents.middleware import HumanInTheLoopMiddleware
 from langchain.mcp import MCPAdapter
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
-from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import Command, interrupt
-
+from DB.checkpoint import github_checkpointer
 from DB.token_storage import oauth_db, token_db
 
 GITHUB_MCP_URL = "https://api.githubcopilot.com/mcp/"
-github_checkpointer = InMemorySaver()  # module level, shared across requests
 
+
+def _form_content(user_reply: str, schema: dict) -> dict:
+    # A JSON object reply is used as is, e.g. {"date": "2026-09-14"}
+    try:
+        parsed = json.loads(user_reply)
+        if isinstance(parsed, dict):
+            return parsed
+    except json.JSONDecodeError:
+        pass
+    # Plain text reply goes into the first field the server asked for
+    fields = list(schema.get("properties", {}))
+    return {fields[0]: user_reply} if fields else {}
 
 async def github_execution_node(state: SubGraphState, config: RunnableConfig):
     user_id = config["configurable"]["thread_id"]
@@ -57,20 +69,44 @@ async def github_execution_node(state: SubGraphState, config: RunnableConfig):
             pending = response["__interrupt__"][0].value
 
         decision = interrupt(pending)
-        action_count = len(pending["action_requests"])
-        if decision.get("action") == "approved":
-            decisions = [{"type": "approve"} for _ in range(action_count)]
-        else:
-            decisions = [
-                {
-                    "type": "reject",
-                    "message": "You rejected this action. Do not retry this tool call.",
-                }
-                for _ in range(action_count)
-            ]
-        final_decission = {"decisions": decisions}
+        result={}
 
-        result = await agent.ainvoke(Command(resume=final_decission), config)
+        if "action_requests" in pending:
+        #  Langchain Agent HITL request
+            action_count = len(pending["action_requests"])
+            if decision.get("action") == "approved":
+                decisions = [{"type": "approve"} for _ in range(action_count)]
+            else:
+                decisions = [
+                    {
+                        "type": "reject",
+                        "message": "You rejected this action. Do not retry this tool call.",
+                    }
+                    for _ in range(action_count)
+                ]
+            final_decission = {"decisions": decisions}
+            result = await agent.ainvoke(Command(resume=final_decission), config)
+        elif pending.get("type") == "mcp_elicitation":
+            # MCP server asked for input mid tool call; the user's reply is in decision["action"]
+            user_reply = str(decision.get("action", "")).strip()
+            responses = {}
+            for req in pending["requests"]:
+                if user_reply.lower() in ("decline", "cancel"):
+                    responses[req["key"]] = {"action": user_reply.lower()}
+                elif req["mode"] == "url":
+                    # User visited the URL, nothing to send back
+                    responses[req["key"]] = {"action": "accept"}
+                else:
+                    responses[req["key"]] = {
+                        "action": "accept",
+                        "content": _form_content(decision["user_message"], req["requested_schema"]),
+                    }
+            # Answers are keyed by the server's own request key
+            final_decission = {"responses": responses}
+            result=await agent.ainvoke(
+            Command(resume=final_decission), config
+            )
+
         is_interrupt = False
         if "__interrupt__" in result:
             is_interrupt = True
