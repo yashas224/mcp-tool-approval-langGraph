@@ -7,6 +7,7 @@ CHAT_API_URL = "http://127.0.0.1:8000/chat"
 RESUME_API_URL = "http://127.0.0.1:8000/resume"
 GITHUB_AUTH_URL = "http://127.0.0.1:8000/github-auth"
 LATEST_MESSAGES_URL = "http://127.0.0.1:8000/conversation/latest"
+DELETE_CHECKPOINT_URL = "http://127.0.0.1:8000/delete-checkpoint"
 REQUEST_TIMEOUT_SECONDS = 120
 
 st.set_page_config(
@@ -124,6 +125,16 @@ def call_resume(user_id: str, action: str) -> dict:
     return response.json()
 
 
+def clear_agent_context(user_id: str) -> dict:
+    response = requests.delete(
+        DELETE_CHECKPOINT_URL,
+        params={"user_id": user_id},
+        timeout=REQUEST_TIMEOUT_SECONDS,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
 github_auth_status = st.query_params.get("github_auth")
 callback_user_id = st.query_params.get("user_id")
 if github_auth_status == "complete" and callback_user_id:
@@ -183,6 +194,26 @@ if st.sidebar.button("🧹 Clear chat", use_container_width=True):
     st.session_state.messages = []
     st.session_state.pending_interrupt = None
     st.rerun()
+
+if st.sidebar.button(
+    "♻️ Clear agent context",
+    use_container_width=True,
+    disabled=valid_user_id is None,
+    help="Deletes the agent's saved memory for this user ID.",
+):
+    try:
+        clear_agent_context(valid_user_id)
+        st.session_state.messages = []
+        st.session_state.pending_interrupt = None
+        st.session_state.pop("latest_conversation", None)
+        st.session_state.pop("github_app_install_clicked", None)
+        st.session_state.context_cleared = True
+        st.rerun()
+    except requests.exceptions.RequestException as error:
+        st.sidebar.error(f"Could not clear agent context: {error}")
+
+if st.session_state.pop("context_cleared", False):
+    st.toast("Agent context cleared", icon="✅")
 
 AVATARS = {"user": "🧑‍💻", "assistant": "🐙"}
 

@@ -26,6 +26,7 @@ from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
 from DB.token_storage import oauth_db, token_db
+from DB.checkpoint import github_checkpointer, checkpointer
 from util import generate_pkce
 
 load_dotenv()
@@ -267,4 +268,14 @@ async def latest_messages(
         "result": auth_result,
         "github_query": github_query,
         "install_url": os.getenv("github_app_install_url") if userJson else None,
+    }
+
+
+@app.delete("/delete-checkpoint")
+def deleteCheckpoint(user_id: str):
+    github_checkpointer.delete_thread(user_id)
+    checkpointer.delete_thread(user_id)
+
+    return {
+        "result": "Cleared Agent context",
     }

@@ -7,6 +7,7 @@ from nodes.conversational_node import conversational_node
 from nodes.sanity_node import agentGaurdNode
 from nodes.tool_executor_node import create_tool_executor_node
 from nodes.tool_selector_node import create_tool_selector_node
+from DB.checkpoint import checkpointer
 
 
 def build_graph(tools, tool_catalog):
@@ -39,7 +40,7 @@ def build_graph(tools, tool_catalog):
 
         return "github-op-cmpleted"
 
-    checkpointer = InMemorySaver()
+    
     agent_builder = (
         StateGraph(MessagesState)
         .add_node("agent_gaurd_node", agentGaurdNode)
